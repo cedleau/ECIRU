@@ -418,7 +418,11 @@ class OperandoExperimentSimple():
     def load_LIR3(self, subpath='IR', **kwargs):
         """Load a list of Bruker Opus Files"""
         assert subpath in os.listdir(self.cell_path), f"{subpath} directory cannot be found in {self.cell_path}"
-        a=scp.read_opus([self.cell_path/subpath/filename for filename in os.listdir(self.cell_path/subpath)])
+        Lfilename = os.listdir(self.cell_path/subpath)
+        if len(Lfilename)>0:
+            a=scp.read_opus([self.cell_path/subpath/filename for filename in os.listdir(self.cell_path/subpath)])
+            setattr(self, subpath, a)
+
         
     def routine_import(self, verbose=1, decimal_ec=','):
         tir = self.load_tir3()
