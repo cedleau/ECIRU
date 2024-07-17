@@ -22,7 +22,7 @@ class EC_file3():
     """A class to work on EC files in python.
     This is a wrapper to have useful electrochemistry functions applied to .txt EC-lab export files
     Version 3.0"""
-    def __init__(self, path, filename, ref_datetime=None, m_active=None, label=None, verbose=1): 
+    def __init__(self, path, filename, ref_datetime=None, m_active=None, label=None, verbose=1, decimal=','): 
         self.label=label
         self.filename=filename
         self.fullpath = path / filename        
@@ -52,7 +52,7 @@ class EC_file3():
         self.m_active=m_active
         
         #Parse dataset to DataFrame
-        self.df=pd.read_csv(self.fullpath, sep='\t', skiprows=self.nb_header-1,  encoding='latin', decimal=',') 
+        self.df=pd.read_csv(self.fullpath, sep='\t', skiprows=self.nb_header-1,  encoding='latin', decimal=decimal) 
         
         # Detect Positive/Negative Currents/OCV
         if '<I>/mA' in self.df.columns: self.df['I/mA']=self.df['<I>/mA']
@@ -381,14 +381,14 @@ class OperandoExperimentSimple():
     def __repr__(self):
         return f"""Operando Cell {self.cell_id}"""
     
-    def load_ec3(self, subpath='ec', verbose=1, **kwargs):
+    def load_ec3(self, subpath='ec', verbose=1, decimal=',', **kwargs):
         assert subpath in os.listdir(self.cell_path), f"{subpath} directory cannot be found in {self.cell_path}"
         Lfilename=[filename for filename in os.listdir(self.cell_path/subpath) if '.txt' in filename]
         Lfilename.sort()
         self.Lec = []
         for filename in Lfilename:
             self.Lec.append(EC_file3(path = self.cell_path / 'ec',
-                                     filename = filename, ref_datetime = self.ref_datetime, verbose=verbose))
+                                     filename = filename, ref_datetime = self.ref_datetime, verbose=verbose, decimal=decimal))
             
         # If they are several EC-lab files, there are connected one after the other, this part of code edits 'accumulated values' so they match to each other
         Lec=self.Lec
@@ -420,9 +420,9 @@ class OperandoExperimentSimple():
         assert subpath in os.listdir(self.cell_path), f"{subpath} directory cannot be found in {self.cell_path}"
         a=scp.read_opus([self.cell_path/subpath/filename for filename in os.listdir(self.cell_path/subpath)])
         
-    def routine_import(self, verbose=1):
+    def routine_import(self, verbose=1, decimal_ec=','):
         tir = self.load_tir3()
-        self.load_ec3(verbose=verbose)
+        self.load_ec3(verbose=verbose, decimal=decimal_ec)
         self.load_LIR3()
         
         df=pd.DataFrame(tir.NdAB.data, index=tir.NdAB.y.data, columns=tir.NdAB.x.data)
