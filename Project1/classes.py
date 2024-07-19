@@ -205,7 +205,7 @@ def buildLegendCapacityPlot(ax, Llabel):
 ### Infrared Spectra Time Series
 class time_IR_spectra3():
     """A class to import OPUS files in Python"""
-    def __init__(self, path=Path('./IR_DATA'), ref_datetime=None, PKA_min=10):
+    def __init__(self, path=Path('./IR_DATA'), ref_datetime=None, PKA_min=10, overrideOpusDatetime=False):
         AB, ScSm, Sig=[],[],[]
         Ldatet, LPKA, LPRA = [], [], []
         Lfilename = os.listdir(path)
@@ -235,7 +235,19 @@ class time_IR_spectra3():
 
             self.AB, self.ScSm, self.Sig = np.vstack(AB), np.vstack(ScSm), np.vstack(Sig)        
             self.Ldatet, self.LPKA, self.LPRA = np.array(Ldatet), np.array(LPKA), np.array(LPRA)
+            self.LdatetOpus = self.Ldatet # Store the time from OPUS in an additional variable
             self.Lfilename = Lfilename
+
+            if overrideOpusDatetime:
+                # Set the time of the spectra as last modification time of the file
+                # rather than the value recorded by OPUS
+                Ldatet=[]
+                for filename in Lfilename:
+                    filepath  = path / filename
+                    ti_m = os.path.getmtime(filepath)                    
+                    Ldatet.append(datetime.fromtimestamp(ti_m).replace(tzinfo=ZoneInfo('Europe/Paris')))
+                    self.Ldatet = np.array(Ldatet)
+            self.overrideOpusDatetime=overrideOpusDatetime
 
             if ref_datetime==None:
                 ref_datetime = Ldatet[0]
@@ -338,7 +350,9 @@ tir_dtgs = load_water_vapor_references(path=waterVapour_path)
 Operando={}
 
 class OperandoExperimentSimple():
-    """A class to automate experiment IR import and processing"""
+    """A class to automate experiment IR import and processing
+- `operando_type`and `num` make up the unique id of the cell. `operando_type` can be anything (like `F1`,`BGSWLK`,`Mai`,...) while `num` must be an integer between 0 and 999. Make sure the folder is formated with three digits : 'F1-112' or 'F1-085' are valid but not 'F1-85')
+- `ref_datetime` is an **optional** parameter to set yourself the reference begining time for the experiment. If you put some values, it should be formatted as follow : `datetime.datetime(2023, 8, 22, 9, 56, 52, 544000, tzinfo=datetime.timezone.utc)`"""
     def __init__(self, num:int, operando_type:str = 'F1',  path=operando_path, ref_datetime = None, verbose=1):
         """operando_type:str : String describing the type of experiment
         num:int : number identifier of the cell
@@ -407,10 +421,10 @@ class OperandoExperimentSimple():
                         .reset_index(drop=True))
             self.ec.detect_OCV()
             
-    def load_tir3(self, subpath='IR_OPERANDO', override = False, **kwargs):
+    def load_tir3(self, subpath='IR_OPERANDO', override=False, overrideOpusDatetime=False, **kwargs):
         """Load a list of Bruker Opus Files"""
         assert subpath in os.listdir(self.cell_path), f"{subpath} directory cannot be found in {self.cell_path}"
-        tir = time_IR_spectra3(self.cell_path / subpath, ref_datetime=self.ref_datetime, **kwargs)
+        tir = time_IR_spectra3(self.cell_path / subpath, ref_datetime=self.ref_datetime, overrideOpusDatetime=overrideOpusDatetime, **kwargs)
         if self.tir == None or override:
             self.tir = tir
         return tir
@@ -424,8 +438,10 @@ class OperandoExperimentSimple():
             setattr(self, subpath, a)
 
         
-    def routine_import(self, verbose=1, decimal_ec=','):
-        tir = self.load_tir3()
+    def routine_import(self, verbose=1, decimal_ec=',', overrideOpusDatetime=False):
+        """- `decimal_ec` is the decimal number separator for electrochemistry. By default it is a comma for ec-lab files exported on the computers in the lab. Your might use '.' is you exported from your own computer.
+- `overrideOpusDatetime`: we have two IR spectrometers in the lab. Somehow, for the new spectro, OPUS software mess up the  time recording when acquiring spectra quickly (every 30 seconds for instance). Setting this parameter to `True` make the code use the file *last modification  date and time* instead of the value inside OPUS file."""
+        tir = self.load_tir3(overrideOpusDatetime=overrideOpusDatetime)
         self.load_ec3(verbose=verbose, decimal=decimal_ec)
         self.load_LIR3()
         
