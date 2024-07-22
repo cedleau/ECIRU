@@ -372,8 +372,10 @@ class OperandoExperimentSimple():
         if self.ref_datetime  == None:
             # Take reference as acquisition of the first operando spectrum
             path_sub = self.cell_path / 'IR_OPERANDO'
+            Lfilename=os.listdir(path_sub)
+            Lfilename.sort()
             if len(os.listdir(path_sub)) != 0:
-                self.ref_datetime = get_opus_datetime((path_sub / os.listdir(path_sub)[0]))
+                self.ref_datetime = get_opus_datetime((path_sub / Lfilename[0]))
         if self.ref_datetime  == None:
             # Take reference as begining of EC-Lab File
             path_sub = self.cell_path / 'ec'
