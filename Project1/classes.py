@@ -484,3 +484,15 @@ def export_tir_to_csv(tir, attr='NdAB_var_SEI', cell_id='Cell-001', Lwn = [1790.
     df2export = pd.DataFrame(df2export, columns=Lwn, index= tir.Lth)
     df2export.to_csv(f'export/{cell_id}_SelectedWavenumerConcentration.csv')
 
+
+def batchRename0042(path):
+    def generateNewName(filename):
+        L = filename.split('.')
+        file, ext = '.'.join(L[:-1]), L[-1]
+        ext = f'{int(ext):04d}'
+        return '.'.join([file, ext])
+        
+    Lfilename = os.listdir(path)
+    for filename in Lfilename:
+        new_filename = generateNewName(filename)
+        os.rename(path/filename, path/new_filename)
